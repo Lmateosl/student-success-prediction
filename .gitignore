@@ -1,0 +1,68 @@
+# --- Python ---
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.pkl
+*.joblib
+
+# Ignore python cache folders
+__pycache__/
+*.pytest_cache/
+.pytest_cache/
+
+# Virtual environments
+venv/
+.env/
+.venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Build / dist
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+logs/
+
+# --- ML & Data ---
+# Ignore datasets and raw data, unless you choose to commit specific files
+data/
+datasets/
+
+# Ignore large model checkpoints, except the ones you saved intentionally
+*.pt
+*.pth
+*.ckpt
+models/*.pt
+models/*.pth
+models/*.ckpt
+
+# --- FastAPI / UVicorn ---
+# PID and temp files
+uvicorn.pid
+
+# --- IDE Files ---
+# VSCode (explicitly keep .vscode folder)
+!.vscode/
+.vscode/*
+
+# Keep only settings
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# macOS crap
+.DS_Store
+
+# --- Outputs (DO NOT IGNORE) ---
+!outputs/
+outputs/**
+
+# --- Root configs ---
+# Allow .gitignore itself
+!.gitignore
