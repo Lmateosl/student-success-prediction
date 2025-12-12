@@ -1,4 +1,4 @@
-# 🎓 Student Success Prediction — Neural Network (PyTorch + FastAPI)
+# 🎓 Student Success Prediction — Neural Network (PyTorch + FastAPI + Readt)
 
 This project builds a **machine learning system** for predicting whether a student is **at risk of academic failure (target = 0)** or **likely to succeed (target = 1)**.  
 The work includes:
