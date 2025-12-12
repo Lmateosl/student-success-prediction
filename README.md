@@ -11,6 +11,7 @@ The work includes:
   - **High-Recall model for at-risk students**  
   - **Balanced model** with similar recall for both classes
 - A production-ready **FastAPI inference service**
+- **Interactive React Frontend** for real‑time predictions and visualization
 
 
 ## 📄 Full Analysis Report (PDF)
