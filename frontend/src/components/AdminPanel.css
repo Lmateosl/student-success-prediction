@@ -1,0 +1,171 @@
+.admin-panel {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 2rem;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.admin-header h2 {
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.admin-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.refresh-button,
+.toggle-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d0d0d0;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.refresh-button:hover:not(:disabled),
+.toggle-button:hover {
+  background: #f7fafc;
+  border-color: #4299e1;
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-content {
+  margin-top: 1rem;
+}
+
+.error-banner {
+  padding: 1rem;
+  background: #fed7d7;
+  color: #c53030;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.empty-message {
+  padding: 2rem;
+  text-align: center;
+  color: #718096;
+  font-size: 1rem;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.predictions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.predictions-table thead {
+  background: #f7fafc;
+}
+
+.predictions-table th {
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #2d3748;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.predictions-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #4a5568;
+}
+
+.predictions-table tbody tr:hover {
+  background: #f7fafc;
+}
+
+.timestamp {
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.confidence {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.prediction-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.prediction-badge.success {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.prediction-badge.at-risk {
+  background: #fed7d7;
+  color: #742a2a;
+}
+
+.table-footer {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+  text-align: center;
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.table-footer p {
+  margin: 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .admin-panel {
+    padding: 1.5rem;
+  }
+
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .admin-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .predictions-table {
+    font-size: 0.8rem;
+  }
+
+  .predictions-table th,
+  .predictions-table td {
+    padding: 0.5rem;
+  }
+}
+

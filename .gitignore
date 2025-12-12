@@ -30,17 +30,21 @@ dist/
 logs/
 
 # --- ML & Data ---
-# Ignore datasets and raw data, unless you choose to commit specific files
-data/
+# Keep the data directory structure but ignore logs
+data/predictions_log.csv
+
+# Ignore datasets except the main one
 datasets/
 
-# Ignore large model checkpoints, except the ones you saved intentionally
-*.pt
-*.pth
+# Keep trained models (needed for API)
+# But ignore large checkpoint files
 *.ckpt
-models/*.pt
-models/*.pth
-models/*.ckpt
+
+# --- Frontend ---
+# Node modules
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
 
 # --- FastAPI / UVicorn ---
 # PID and temp files

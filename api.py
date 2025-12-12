@@ -1,6 +1,8 @@
 import os
 import json
-from typing import List, Dict
+import csv
+from datetime import datetime
+from typing import List, Dict, Optional
 
 import joblib
 import numpy as np
@@ -8,6 +10,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 # -----------------------------
@@ -15,11 +18,16 @@ from pydantic import BaseModel, Field
 # -----------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
+DATA_DIR = os.path.join(BASE_DIR, "data")
 
 FEATURE_COLUMNS_PATH = os.path.join(MODELS_DIR, "feature_columns.json")
 NUMERIC_MEDIANS_PATH = os.path.join(MODELS_DIR, "numeric_medians.joblib")
 SCALER_PATH = os.path.join(MODELS_DIR, "scaler.joblib")
 MODEL_PATH = os.path.join(MODELS_DIR, "best_grid_model.pt")  # model recommended for the API
+PREDICTIONS_LOG_PATH = os.path.join(DATA_DIR, "predictions_log.csv")
+
+# Create data directory if it doesn't exist
+os.makedirs(DATA_DIR, exist_ok=True)
 
 # -----------------------------
 # Load artifacts at startup
@@ -209,6 +217,15 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Add CORS middleware to allow frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # -----------------------------
 # Pydantic models
@@ -217,29 +234,29 @@ class StudentFeatures(BaseModel):
     """
     Features for a single student in a human-friendly format.
 
-    Numeric fields use the original dataset names (with quotes) as JSON keys via aliases.
+    Numeric fields use simple human-friendly names as JSON keys.
     Categorical fields are provided as integer codes as described in the project
     documentation (e.g. "English Grade": 1..11) and will be expanded internally to
     one-hot encoded columns.
     """
 
-    # Core numeric features (use original column names as JSON keys)
-    first_term_gpa: float = Field(..., alias="First Term Gpa' numeric")
-    second_term_gpa: float = Field(..., alias="Second Term Gpa' numeric")
-    high_school_average_mark: float = Field(..., alias="High School Average Mark' numeric")
-    math_score: float = Field(..., alias="Math Score' numeric")
+    # Core numeric features (use human-friendly names as JSON keys)
+    first_term_gpa: Optional[float] = Field(None, alias="First Term GPA")
+    second_term_gpa: Optional[float] = Field(None, alias="Second Term GPA")
+    high_school_average: Optional[float] = Field(None, alias="High School Average")
+    math_score: Optional[float] = Field(None, alias="Math Score")
 
     # Raw categorical codes (optional – if missing, they will be treated as unknown / 0)
-    first_language: int | None = Field(None, alias="First Language")
-    funding: int | None = Field(None, alias="Funding")
-    school: int | None = Field(None, alias="School")
-    fast_track: int | None = Field(None, alias="Fast Track")
-    coop: int | None = Field(None, alias="Coop")
-    residency: int | None = Field(None, alias="Residency")
-    gender: int | None = Field(None, alias="Gender")
-    prev_education: int | None = Field(None, alias="Prev Education")
-    age_group: int | None = Field(None, alias="Age Group")
-    english_grade: int | None = Field(None, alias="English Grade")
+    first_language: Optional[int] = Field(None, alias="First Language")
+    funding: Optional[int] = Field(None, alias="Funding")
+    school: Optional[int] = Field(None, alias="School")
+    fast_track: Optional[int] = Field(None, alias="Fast Track")
+    coop: Optional[int] = Field(None, alias="Coop")
+    residency: Optional[int] = Field(None, alias="Residency")
+    gender: Optional[int] = Field(None, alias="Gender")
+    prev_education: Optional[int] = Field(None, alias="Prev Education")
+    age_group: Optional[int] = Field(None, alias="Age Group")
+    english_grade: Optional[int] = Field(None, alias="English Grade")
 
 
 class PredictRequest(BaseModel):
@@ -277,6 +294,89 @@ class FeatureColumnsResponse(BaseModel):
     raw_categorical_fields: List[CategoricalFieldInfo]
 
 
+class PredictionLog(BaseModel):
+    """A single logged prediction."""
+
+    timestamp: str
+    first_term_gpa: Optional[float] = None
+    second_term_gpa: Optional[float] = None
+    high_school_average: Optional[float] = None
+    math_score: Optional[float] = None
+    residency: Optional[int] = None
+    funding: Optional[int] = None
+    prediction: int
+    probability: float
+
+
+class PredictionsListResponse(BaseModel):
+    """Response containing list of recent predictions."""
+
+    predictions: List[PredictionLog]
+    total: int
+
+
+# -----------------------------
+# Helper: log predictions
+# -----------------------------
+def log_prediction(instance_data: Dict, prediction: int, probability: float):
+    """Log a prediction to CSV file."""
+    timestamp = datetime.now().isoformat()
+    
+    # Initialize CSV file with headers if it doesn't exist
+    file_exists = os.path.exists(PREDICTIONS_LOG_PATH)
+    
+    with open(PREDICTIONS_LOG_PATH, 'a', newline='', encoding='utf-8') as f:
+        fieldnames = [
+            'timestamp', 'first_term_gpa', 'second_term_gpa', 
+            'high_school_average', 'math_score', 'residency', 
+            'funding', 'prediction', 'probability'
+        ]
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        
+        if not file_exists:
+            writer.writeheader()
+        
+        # Extract relevant fields from instance data
+        log_entry = {
+            'timestamp': timestamp,
+            'first_term_gpa': instance_data.get('First Term GPA'),
+            'second_term_gpa': instance_data.get('Second Term GPA'),
+            'high_school_average': instance_data.get('High School Average'),
+            'math_score': instance_data.get('Math Score'),
+            'residency': instance_data.get('Residency'),
+            'funding': instance_data.get('Funding'),
+            'prediction': prediction,
+            'probability': round(probability, 4)
+        }
+        
+        writer.writerow(log_entry)
+
+
+def get_recent_predictions(limit: int = 50) -> List[PredictionLog]:
+    """Read recent predictions from CSV log."""
+    if not os.path.exists(PREDICTIONS_LOG_PATH):
+        return []
+    
+    predictions = []
+    with open(PREDICTIONS_LOG_PATH, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            predictions.append(PredictionLog(
+                timestamp=row['timestamp'],
+                first_term_gpa=float(row['first_term_gpa']) if row['first_term_gpa'] else None,
+                second_term_gpa=float(row['second_term_gpa']) if row['second_term_gpa'] else None,
+                high_school_average=float(row['high_school_average']) if row['high_school_average'] else None,
+                math_score=float(row['math_score']) if row['math_score'] else None,
+                residency=int(row['residency']) if row['residency'] else None,
+                funding=int(row['funding']) if row['funding'] else None,
+                prediction=int(row['prediction']),
+                probability=float(row['probability'])
+            ))
+    
+    # Return most recent predictions first
+    return list(reversed(predictions[-limit:]))
+
+
 # -----------------------------
 # Helper: prepare features
 # -----------------------------
@@ -285,14 +385,28 @@ def prepare_features(instances: List[Dict[str, float]]) -> torch.Tensor:
 
     Steps:
     1. Build a DataFrame from the list of dicts.
-    2. For numeric columns, fill missing values with training medians.
-    3. Ensure all expected FEATURE_COLUMNS exist (missing ones are set to 0).
-    4. Order columns according to FEATURE_COLUMNS.
-    5. Scale only the numeric columns using the stored scaler.
-    6. Convert to float32 tensor.
+    2. Map human-friendly names to training column names.
+    3. For numeric columns, fill missing values with training medians.
+    4. Ensure all expected FEATURE_COLUMNS exist (missing ones are set to 0).
+    5. Order columns according to FEATURE_COLUMNS.
+    6. Scale only the numeric columns using the stored scaler.
+    7. Convert to float32 tensor.
     """
 
     df = pd.DataFrame(instances)
+
+    # Map human-friendly numeric column names to training column names
+    column_mapping = {
+        "First Term GPA": "First Term Gpa' numeric",
+        "Second Term GPA": "Second Term Gpa' numeric",
+        "High School Average": "High School Average Mark' numeric",
+        "Math Score": "Math Score' numeric",
+    }
+    
+    # Rename columns that exist in the dataframe
+    for friendly_name, training_name in column_mapping.items():
+        if friendly_name in df.columns:
+            df = df.rename(columns={friendly_name: training_name})
 
     # Expand raw categorical codes (e.g. "English Grade": 3) into
     # one-hot encoded feature columns expected by the model.
@@ -388,6 +502,14 @@ def predict(request: PredictRequest):
     # Default threshold = 0.5 on probability of class 1
     preds = [1 if p >= 0.5 else 0 for p in probs]
 
+    # Log predictions (log each instance separately)
+    for instance_data, pred, prob in zip(instance_dicts, preds, probs):
+        try:
+            log_prediction(instance_data, pred, prob)
+        except Exception as e:
+            # Don't fail the prediction if logging fails
+            print(f"Warning: Failed to log prediction: {e}")
+
     return PredictResponse(probabilities=probs, predictions=preds)
 
 
@@ -400,3 +522,26 @@ def root():
         "n_features": len(FEATURE_COLUMNS),
         "model_path": MODEL_PATH,
     }
+
+
+@app.get("/predictions", response_model=PredictionsListResponse)
+def get_predictions(limit: int = 50):
+    """Get recent predictions from the log.
+    
+    This endpoint provides an admin/overview of recent predictions
+    for the structured data access API requirement.
+    
+    Args:
+        limit: Maximum number of predictions to return (default: 50)
+    
+    Returns:
+        List of recent predictions with metadata
+    """
+    try:
+        predictions = get_recent_predictions(limit=limit)
+        return PredictionsListResponse(
+            predictions=predictions,
+            total=len(predictions)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve predictions: {str(e)}")
