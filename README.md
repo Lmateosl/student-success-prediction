@@ -12,7 +12,14 @@ The work includes:
   - **Balanced model** with similar recall for both classes
 - A production-ready **FastAPI inference service**
 
-This document summarizes the workflow, the rationale behind design decisions, and the results.
+
+## 📄 Full Analysis Report (PDF)
+
+A detailed technical report explaining the full preprocessing workflow, modeling decisions, hyperparameter search, and evaluation results is available here:
+
+👉 **[Analysis_Report.pdf](./Analysis_Report.pdf)**
+
+This document is recommended for academic or professional review.
 
 ---
 
